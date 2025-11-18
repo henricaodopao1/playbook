@@ -1,61 +1,8 @@
 param (   
     [Parameter(Mandatory = $true)]
     [ValidateSet("EdgeBrowser", "WebView", "EdgeUpdate", "SetDeviceRegion", "RestoreDeviceRegion")]
-    [string]$Mode,
-    
-    [Parameter(Mandatory = $false)]
-    [int]$DeviceRegion = 244  # US (244)
+    [string]$Mode
 )
-
-function Set-DeviceRegion {
-    param (
-        [Parameter(Mandatory = $true)]
-        [int]$Region
-    )
-    
-    Write-Host "[SetDeviceRegion] Setting device region to: $Region"
-    
-    try {
-        $originalNation = [microsoft.win32.registry]::GetValue('HKEY_USERS\.DEFAULT\Control Panel\International\Geo', 'Nation', $null)
-        
-        if ($null -ne $originalNation) {
-            [microsoft.win32.registry]::SetValue('HKEY_USERS\.DEFAULT\Control Panel\International\Geo', 'OriginalNation', $originalNation, [Microsoft.Win32.RegistryValueKind]::String) | Out-Null
-            Write-Host "[SetDeviceRegion] Backed up original Nation: $originalNation"
-        }
-        
-        [microsoft.win32.registry]::SetValue('HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Control Panel\DeviceRegion', 'DeviceRegion', $Region, [Microsoft.Win32.RegistryValueKind]::DWord) | Out-Null
-        [microsoft.win32.registry]::SetValue('HKEY_USERS\.DEFAULT\Control Panel\International\Geo', 'Nation', $Region, [Microsoft.Win32.RegistryValueKind]::String) | Out-Null
-        
-        Write-Host "[SetDeviceRegion] Device region successfully set to: $Region"
-    }
-    catch {
-        Write-Host "[SetDeviceRegion] Failed to set device region: $_"
-    }
-}
-
-function Restore-DeviceRegion {
-    Write-Host "[RestoreDeviceRegion] Restoring original device region"
-    
-    try {
-        $originalNation = [microsoft.win32.registry]::GetValue('HKEY_USERS\.DEFAULT\Control Panel\International\Geo', 'OriginalNation', $null)
-        
-        if ($null -ne $originalNation) {
-            [microsoft.win32.registry]::SetValue('HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Control Panel\DeviceRegion', 'DeviceRegion', $originalNation, [Microsoft.Win32.RegistryValueKind]::DWord) | Out-Null
-            [microsoft.win32.registry]::SetValue('HKEY_USERS\.DEFAULT\Control Panel\International\Geo', 'Nation', $originalNation, [Microsoft.Win32.RegistryValueKind]::String) | Out-Null
-            
-            Remove-ItemProperty -Path "HKCU:\Control Panel\International\Geo" -Name "OriginalNation" -ErrorAction SilentlyContinue | Out-Null
-            
-            Write-Host "[RestoreDeviceRegion] Device region and Nation restored to: $originalNation"
-        } else {
-            Write-Host "[RestoreDeviceRegion] No original region value was found to restore, Setting to US (244)"
-            [microsoft.win32.registry]::SetValue('HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Control Panel\DeviceRegion', 'DeviceRegion', 244, [Microsoft.Win32.RegistryValueKind]::DWord) | Out-Null
-            [microsoft.win32.registry]::SetValue('HKEY_USERS\.DEFAULT\Control Panel\International\Geo', 'Nation', 244, [Microsoft.Win32.RegistryValueKind]::String) | Out-Null
-        }
-    }
-    catch {
-        Write-Host "[RestoreDeviceRegion] Failed to restore device region: $_"
-    }
-}
 
 function Uninstall-Process {
     param (
@@ -111,8 +58,28 @@ function Uninstall-Process {
         return
     }
 
-    $process = Start-Process -FilePath $uninstallString -ArgumentList $uninstallArguments -Wait -Verbose -NoNewWindow -PassThru
-    Write-Host "[$Mode] Uninstallation process exit code: $($process.ExitCode)"
+    # Process spoofing technique
+    # Allowed list of parent processes: dllhost.exe, msiexec.exe, sihost.exe, SystemSettings.exe
+    $spoofDir = "$env:SystemRoot\ImmersiveControlPanel"
+    $spoofPath = "$spoofDir\sihost.exe"
+
+    try {    
+        Copy-Item -Path "$env:SystemRoot\System32\cmd.exe" -Destination $spoofPath -Force
+        Write-Host "[$Mode] Created spsoofed process at: $spoofPath"
+
+        $cmdArgs = "/c `"$uninstallString`" $uninstallArguments"
+
+        $process = Start-Process -FilePath $spoofPath -ArgumentList $cmdArgs -Wait -Verbose -NoNewWindow -PassThru
+        Write-Host "[$Mode] Uninstallation process exit code: $($process.ExitCode)"
+
+        Remove-Item -Path $spoofPath -Force -ErrorAction SilentlyContinue
+        Write-Host "[$Mode] Cleaned up spoofed process"
+    }
+    catch {
+        Write-Host "[$Mode] Failed during process spoofing: $_"
+        Remove-Item -Path $spoofPath -Force -ErrorAction SilentlyContinue
+        return
+    }
 
     if ((Get-ItemProperty -Path $baseKey).IsEdgeStableUninstalled -eq 1) {
         Write-Host "[$Mode] Edge Stable has been successfully uninstalled"
