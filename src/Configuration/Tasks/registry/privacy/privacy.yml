@@ -114,4 +114,5 @@ actions:
 
   # === Prevent Gaming Copilot dll file(s) from loading
   # Can be also removed by uninstall the Xbox app
-  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Microsoft.Xbox.GamingAI.Companion.Host.GamingCompanionHostOptions', value: 'ActivationType', type: REG_DWORD, data: '0'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Microsoft.Xbox.GamingAI.Companion.Host.GamingCompanionHostOptions', value: 'ActivationType', type: REG_DWORD, data: '4294967295'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Microsoft.Xbox.GamingAI.Companion.Host.GamingCompanionHostOptions', value: 'Server', type: REG_SZ, data: ''}

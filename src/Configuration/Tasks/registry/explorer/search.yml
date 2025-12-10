@@ -67,3 +67,7 @@ actions:
   # === Cortana on Lock Screen - Disabled
   # ------> https://winaero.com/blog/how-to-enable-cortana-on-lock-screen/
   - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\Speech_OneCore\Preferences', value: 'VoiceActivationEnableAboveLockscreen', type: REG_DWORD, data: '0'}
+
+  # Disable Store results in Search (25H2)
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\WinStore.Tasks.WindowsSearchTask', value: 'ActivationType', type: REG_DWORD, data: '4294967295'}
+  - !registryValue: {path: 'HKLM\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\WinStore.Tasks.WindowsSearchTask', value: 'Server', type: REG_SZ, data: ''}
