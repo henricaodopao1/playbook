@@ -46,10 +46,6 @@ actions:
   # === Program Compatibility Assistant Service - Disabled
   - !service: {name: 'PcaSvc', operation: change, startup: 4}
 
-  # === Diagnostic Policy Service - Disabled
-  # ------> Needed for Data usage and troubleshooting, but the Troubleshooter automatically activates the service itself when needed
-  - !service: {name: 'DPS', operation: change, startup: 4}
-
   # === Diagnostic Service Host - Disabled
   - !service: {name: 'WdiServiceHost', operation: change, startup: 4}
 
